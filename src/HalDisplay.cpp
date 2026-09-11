@@ -44,6 +44,7 @@ struct GrayscalePreviewState {
   bool bwBaseValid = false;
   bool lsbValid = false;
   bool msbValid = false;
+  bool absolute = false;
 };
 
 constexpr uint8_t kGrayWhite = 255;
@@ -214,7 +215,10 @@ void composeGrayscalePreview() {
           getBit(grayscalePreviewState.msbPlane.data(), x, y);
 
       uint8_t level = kGrayWhite;
-      if (!baseWhite) {
+      if (grayscalePreviewState.absolute) {
+        const uint8_t value = (lsbActive ? 1 : 0) | (msbActive ? 2 : 0);
+        level = value == 0 ? kGrayBlack : value == 1 ? kGrayLight : value == 2 ? kGrayDark : kGrayWhite;
+      } else if (!baseWhite) {
         if (msbActive) {
           level = lsbActive ? kGrayDark : kGrayLight;
         } else if (lsbActive) {
@@ -511,6 +515,22 @@ void HalDisplay::returnFrameBufferStorage() {
   frameBufferLent = false;
 }
 
+HalDisplay::Controller HalDisplay::getController() const {
+  return BoardConfig::ACTIVE.displayController;
+}
+
+HalDisplay::GrayscaleCapabilities HalDisplay::grayscaleCapabilities(
+    GrayscaleMode mode) const {
+  if (mode == GrayscaleMode::Absolute) {
+    return {GrayscaleEncoding::AbsolutePlanes, GrayscaleBase::Separate, true,
+            false, false};
+  }
+  return {GrayscaleEncoding::OverlayMasks,
+          combinesGrayscaleBase() ? GrayscaleBase::Combined
+                                  : GrayscaleBase::Separate,
+          true, false, false};
+}
+
 void HalDisplay::copyGrayscaleBuffers(const uint8_t *lsbBuffer,
                                       const uint8_t *msbBuffer) {
   copyGrayscaleLsbBuffers(lsbBuffer);
@@ -518,11 +538,24 @@ void HalDisplay::copyGrayscaleBuffers(const uint8_t *lsbBuffer,
 }
 void HalDisplay::displayGrayscaleBase(RefreshMode fallback,
                                       bool turnOffScreen) {
+  grayscalePreviewState.absolute = false;
   if (combinesGrayscaleBase()) {
     snapshotBwBase(getFrameBuffer());
     return;
   }
   displayBuffer(fallback, turnOffScreen);
+}
+bool HalDisplay::displayGrayscaleBase(GrayscaleMode mode,
+                                      RefreshMode fallback,
+                                      bool turnOffScreen) {
+  if (!grayscaleCapabilities(mode).supported()) return false;
+  grayscalePreviewState.absolute = mode == GrayscaleMode::Absolute;
+  if (combinesGrayscaleBase() && mode == GrayscaleMode::Overlay) {
+    snapshotBwBase(getFrameBuffer());
+    return true;
+  }
+  displayBuffer(fallback, turnOffScreen);
+  return true;
 }
 void HalDisplay::preconditionGrayscale() {}
 void HalDisplay::preconditionGrayscale(uint16_t, uint16_t, uint16_t, uint16_t) {
@@ -569,6 +602,9 @@ void HalDisplay::writeGrayscalePlaneStrip(bool lsbPlane, const uint8_t *rows,
   }
 }
 bool HalDisplay::supportsStripGrayscale() const { return true; }
+bool HalDisplay::supportsAsyncGrayscaleBase() const {
+  return grayscaleCapabilities().asyncBase;
+}
 bool HalDisplay::combinesGrayscaleBase() const {
   return BoardConfig::isPaperMono();
 }

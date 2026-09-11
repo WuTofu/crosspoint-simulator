@@ -589,6 +589,13 @@ bool HalGPIO::isPressed(uint8_t buttonIndex) const {
   return state[buttonScancode[buttonIndex]] || syntheticButtonDown[buttonIndex];
 }
 
+bool HalGPIO::rawInputActive() {
+  for (uint8_t button = 0; button < NUM_BUTTONS; ++button) {
+    if (isPressed(button)) return true;
+  }
+  return touchState.down || homeKeyDown;
+}
+
 bool HalGPIO::wasPressed(uint8_t buttonIndex) const {
   if (buttonIndex >= NUM_BUTTONS)
     return false;
