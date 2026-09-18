@@ -7,7 +7,7 @@ class HalDisplay {
 public:
   using Controller = BoardConfig::DisplayController;
 
-  enum class GrayscaleMode : uint8_t { Overlay, Absolute };
+  enum class GrayscaleMode : uint8_t { Overlay, Absolute, Direct };
   enum class GrayscaleEncoding : uint8_t {
     Unsupported,
     OverlayMasks,

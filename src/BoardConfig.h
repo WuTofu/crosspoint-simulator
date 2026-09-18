@@ -109,10 +109,20 @@ enum class Board {
 };
 
 enum class DisplayController {
-  SSD1677,
-  UC8253,
-  UC8279,
-  UC8179,
+  SSD1677 = 0,
+  UC8253 = 2,
+  ED2208 = 3,
+  LgfxEpd = 4,
+  IT8951 = 5,
+  UC8279 = 6,
+  UC8179 = 7,
+  UC8279C = 8,
+};
+
+enum class TouchController : uint8_t { None, Chsc6x, Gt911, Ft5x06, Ft6336u, Gslx680 };
+
+struct TouchConfig {
+  TouchController controller = TouchController::None;
 };
 
 struct ViewableInsets {
@@ -132,6 +142,9 @@ struct BoardProfile {
     int8_t down;
   } input;
   ViewableInsets viewableInsets = {};
+  uint16_t displayWidth = 800;
+  uint16_t displayHeight = 480;
+  TouchConfig touch = {};
 };
 
 #if defined(SIMULATOR_DISPLAY_UC8179)
@@ -161,15 +174,17 @@ inline constexpr BoardProfile XTEINK_X3_UC8279 = {
     {4, 5}};
 inline constexpr BoardProfile XTEINK_X4_PRO = {
     Board::XteinkX4Pro, "xteink_x4_pro", X4_DISPLAY_CONTROLLER,
-    X4_DISPLAY_CONTROLLER_VARIANT, {0, 7}};
+    X4_DISPLAY_CONTROLLER_VARIANT, {0, 7}, {}, 800, 480,
+    {TouchController::Gt911}};
 inline constexpr BoardProfile XTEINK_X4_CLASSIC = {
     Board::XteinkX4Classic, "xteink_x4_classic", X4_DISPLAY_CONTROLLER,
     X4_DISPLAY_CONTROLLER_VARIANT, {0, 7}, {9, 7, 3, 7}};
 inline constexpr BoardProfile STICKY = {
-    Board::Sticky, "sticky", DisplayController::SSD1677, 0, {5, 6}};
+    Board::Sticky, "sticky", DisplayController::SSD1677, 0, {5, 6}, {}, 800,
+    480, {TouchController::Gt911}};
 inline constexpr BoardProfile PAPER_MONO = {
     Board::PaperMono, "m5stack_paper_mono", DisplayController::SSD1677, 0,
-    {0, 7}, {9, 7, 3, 7}};
+    {0, 7}, {9, 7, 3, 7}, 800, 480, {TouchController::Ft6336u}};
 
 #if defined(SIMULATOR_DEVICE_PAPERMONO)
 inline BoardProfile ACTIVE = PAPER_MONO;

@@ -521,9 +521,10 @@ HalDisplay::Controller HalDisplay::getController() const {
 
 HalDisplay::GrayscaleCapabilities HalDisplay::grayscaleCapabilities(
     GrayscaleMode mode) const {
-  if (mode == GrayscaleMode::Absolute) {
-    return {GrayscaleEncoding::AbsolutePlanes, GrayscaleBase::Separate, true,
-            false, false};
+  if (mode == GrayscaleMode::Absolute || mode == GrayscaleMode::Direct) {
+    return {GrayscaleEncoding::AbsolutePlanes,
+            mode == GrayscaleMode::Direct ? GrayscaleBase::Combined : GrayscaleBase::Separate,
+            true, false, false};
   }
   return {GrayscaleEncoding::OverlayMasks,
           combinesGrayscaleBase() ? GrayscaleBase::Combined
@@ -549,7 +550,7 @@ bool HalDisplay::displayGrayscaleBase(GrayscaleMode mode,
                                       RefreshMode fallback,
                                       bool turnOffScreen) {
   if (!grayscaleCapabilities(mode).supported()) return false;
-  grayscalePreviewState.absolute = mode == GrayscaleMode::Absolute;
+  grayscalePreviewState.absolute = mode != GrayscaleMode::Overlay;
   if (combinesGrayscaleBase() && mode == GrayscaleMode::Overlay) {
     snapshotBwBase(getFrameBuffer());
     return true;

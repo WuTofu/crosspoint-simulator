@@ -94,6 +94,7 @@ void HalStorage::endUsbDrive() {}
 UsbDriveState HalStorage::usbDriveState() const {
   return UsbDriveState::Unsupported;
 }
+bool HalStorage::usbDriveHostSuspended() const { return false; }
 
 class HalFile::Impl {
 public:
@@ -173,6 +174,15 @@ size_t HalFile::size() {
 }
 size_t HalFile::fileSize() { return size(); }
 uint64_t HalFile::fileSize64() { return size(); }
+uint32_t HalFile::modificationTime() {
+  if (!impl || impl->path.empty())
+    return 0;
+
+  struct stat info{};
+  const int result = (impl->fd >= 0) ? fstat(impl->fd, &info)
+                                     : stat(impl->path.c_str(), &info);
+  return result == 0 ? static_cast<uint32_t>(info.st_mtime) : 0;
+}
 bool HalFile::seek(size_t pos) {
   if (!impl || impl->fd < 0)
     return false;

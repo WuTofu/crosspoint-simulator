@@ -66,6 +66,9 @@ struct ESPMock {
   uint32_t getMaxAllocHeap() {
     return std::min(heapValue("CROSSPOINT_SIM_MAX_ALLOC_HEAP"), getFreeHeap());
   }
+  const char *getChipModel() const { return "simulator"; }
+  uint32_t getChipRevision() const { return 0; }
+  uint32_t getFlashChipSize() const { return 16U * 1024U * 1024U; }
 };
 extern ESPMock ESP;
 
