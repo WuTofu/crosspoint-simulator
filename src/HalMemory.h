@@ -5,7 +5,7 @@
 #include <memory>
 
 class HalMemory {
- public:
+public:
   struct HeapStats {
     size_t freeBytes;
     size_t totalBytes;
@@ -14,7 +14,7 @@ class HalMemory {
   };
 
   struct PsramDeleter {
-    void operator()(uint8_t* buffer) const;
+    void operator()(uint8_t *buffer) const;
   };
   using PsramBuffer = std::unique_ptr<uint8_t[], PsramDeleter>;
   // The simulator has no PSRAM; always null, matching the firmware's

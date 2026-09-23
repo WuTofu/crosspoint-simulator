@@ -101,6 +101,7 @@ public:
   int fd = -1;
   std::string path;
   DIR *dir = nullptr;
+  size_t directoryPosition = 0;
 
   bool open(const char *p, int flags) {
     path = p;
@@ -118,6 +119,7 @@ public:
   bool openAsDir(const char *p) {
     path = p;
     dir = opendir(p);
+    directoryPosition = 0;
     return dir != nullptr;
   }
 
@@ -201,8 +203,19 @@ bool HalFile::seekCur(int64_t offset) {
   return lseek(impl->fd, (off_t)offset, SEEK_CUR) >= 0;
 }
 bool HalFile::seekSet(size_t offset) {
-  if (!impl || impl->fd < 0)
-    return false;
+  if (!impl) return false;
+  if (impl->dir) {
+    // LibraryBuilder closes a parent directory while it walks a child, then
+    // reopens and resumes it. A POSIX telldir cookie is not valid for a new
+    // stream, so replay the stable count of raw directory entries instead.
+    rewinddir(impl->dir);
+    for (size_t i = 0; i < offset; ++i) {
+      if (readdir(impl->dir) == nullptr) return false;
+    }
+    impl->directoryPosition = offset;
+    return true;
+  }
+  if (impl->fd < 0) return false;
   return lseek(impl->fd, (off_t)offset, SEEK_SET) >= 0;
 }
 int HalFile::available() const {
@@ -214,8 +227,9 @@ int HalFile::available() const {
   return (int)(end - cur);
 }
 size_t HalFile::position() const {
-  if (!impl || impl->fd < 0)
-    return 0;
+  if (!impl) return 0;
+  if (impl->dir) return impl->directoryPosition;
+  if (impl->fd < 0) return 0;
   off_t pos = lseek(impl->fd, 0, SEEK_CUR);
   return pos < 0 ? 0 : (size_t)pos;
 }
@@ -259,8 +273,10 @@ bool HalFile::rename(const char *newPath) {
 }
 bool HalFile::isDirectory() const { return impl && impl->isDir(); }
 void HalFile::rewindDirectory() {
-  if (impl && impl->dir)
+  if (impl && impl->dir) {
     rewinddir(impl->dir);
+    impl->directoryPosition = 0;
+  }
 }
 bool HalFile::close() {
   if (!impl)
@@ -282,6 +298,7 @@ HalFile HalFile::openNextFile() {
     struct dirent *entry = readdir(impl->dir);
     if (!entry)
       return HalFile();
+    ++impl->directoryPosition;
     if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
       continue; // skip . and ..
 
